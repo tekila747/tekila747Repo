@@ -1,0 +1,49 @@
+# Generated with Microsoft365DSC version 1.20.723.1
+# For additional information on how to use Microsoft365DSC, please visit https://aka.ms/M365DSC
+param (
+    [parameter()]
+    [System.Management.Automation.PSCredential]
+    $GlobalAdminAccount
+)
+
+Configuration M365TenantConfig
+{
+    param (
+        [parameter()]
+        [System.Management.Automation.PSCredential]
+        $GlobalAdminAccount
+    )
+
+    if ($null -eq $GlobalAdminAccount)
+    {
+        <# Credentials #>
+        $Credsglobaladmin = Get-Credential -Message "Global Admin credentials"
+    }
+    else
+    {
+        $Credsglobaladmin = $GlobalAdminAccount
+    }
+
+    $OrganizationName = $Credsglobaladmin.UserName.Split('@')[1]
+    Import-DscResource -ModuleName Microsoft365DSC
+
+    Node localhost
+    {
+        TeamsMeetingPolicy 4dd756aa-6396-4ba6-9d81-8a28cff738e8
+        {
+            AllowAnonymousUsersToStartMeeting          = $False; ### L1|We don't recommend external paarticipants to be able to start meeting because malicious users could lure employees in thinking that this is a formal meeting.
+            AllowCloudRecording                        = $False; ### L2|We don't recommending allowing your recordings to be saved to the cloud. Set this value to <strong>false</strong>. For additional information, please refer to <a href="https://nikcharlebois.com/">this article</a>.
+            AllowExternalParticipantGiveRequestControl = $True; ### L1|We don't recommend you allowing external Participant to give request control because that exposes your organization to threats.
+            AllowWhiteboard                            = $True; ### L2|We recommend enabling whiteboard to improve collaboration. Set this value to <strong>true</strong>.
+            Ensure                                     = "Present";
+            Identity                                   = "Global";
+        }
+        TeamsMessagingPolicy 03c4ef23-cfb4-4801-b263-bd989c3e6177
+        {
+            AllowGiphy                    = $False; ### L1|We recommend disabling giphy because they can be a distraction and offensive to members of the meeting. Set this to $false.
+            Ensure                        = "Present";
+            Identity                      = "Global";
+        }
+    }
+}
+M365TenantConfig -ConfigurationData .\ConfigurationData.psd1 -GlobalAdminAccount $GlobalAdminAccount
